@@ -27,8 +27,53 @@ schedulerExtraArgs:
   feature-gates: ${feature_gates}
 apiServerExtraArgs:
   feature-gates: ${feature_gates}
+auditPolicy:
+  path: "/etc/kubernetes/audit-policy.yaml"
+  webhookConfigPath: "/etc/kubernetes/audit-webhook.yaml"
+  webhookInitialBackoff: "50s"
+  logDir: "/config"
+  logMaxAge: 10
 EOF
 chmod 0600 /etc/kubernetes/kubeadm.conf
+
+cat <<EOWEBHOOK > /etc/kubernetes/audit-webhook.yaml
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: http://audit.ii.nz:9000
+  name: hit-config
+contexts:
+- context:
+    cluster: hit-config
+    user: ""
+  name: webhook
+current-context: webhook
+users: []
+preferences: {}
+EOWEBHOOK
+chmod 0600 /etc/kubernetes/audit-webhook.conf
+
+cat <<EOPOLICY > /etc/kubernetes/audit-policy.yaml
+apiVersion: audit.k8s.io/v1beta1
+kind: Policy
+omitStages:
+  - "RequestReceived"
+rules:
+- level: RequestResponse
+  resources:
+  - group: "" # core
+    resources: ["pods", "secrets"]
+  - group: "extensions"
+    resources: ["deployments"]
+EOPOLICY
+chmod 0600 /etc/kubernetes/audit-policy.conf
+
+echo We need a version of kubeadm that supports audit-webhook configuration
+echo See: https://github.com/kubernetes/kubernetes/pull/62826
+cd /usr/bin
+curl -O https://storage.googleapis.com/artifacts.ii-coop.appspot.com/kubeadm
+chmod +x kubeadm
 
 kubeadm init --config /etc/kubernetes/kubeadm.conf
 
