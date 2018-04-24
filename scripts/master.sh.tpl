@@ -52,7 +52,7 @@ current-context: webhook
 users: []
 preferences: {}
 EOWEBHOOK
-chmod 0600 /etc/kubernetes/audit-webhook.conf
+chmod 0600 /etc/kubernetes/audit-webhook.yaml
 
 cat <<EOPOLICY > /etc/kubernetes/audit-policy.yaml
 apiVersion: audit.k8s.io/v1beta1
@@ -67,7 +67,7 @@ rules:
   - group: "extensions"
     resources: ["deployments"]
 EOPOLICY
-chmod 0600 /etc/kubernetes/audit-policy.conf
+chmod 0600 /etc/kubernetes/audit-policy.yaml
 
 echo We need a version of kubeadm that supports audit-webhook configuration
 echo See: https://github.com/kubernetes/kubernetes/pull/62826
