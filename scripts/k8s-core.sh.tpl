@@ -62,4 +62,5 @@ for f in kubelet kubeadm kubectl; do
   chmod +x /usr/bin/$f
 done
 
+sysctl -w vm.max_map_count=262144
 systemctl daemon-reload
