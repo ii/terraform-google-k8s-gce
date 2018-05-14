@@ -14,6 +14,8 @@ authorizationModes:
 - RBAC
 apiServerCertSANs:
 - 127.0.0.1
+featureGates:
+  Auditing: true
 controllerManagerExtraArgs:
   cluster-name: ${instance_prefix}
   allocate-node-cidrs: "true"
@@ -27,10 +29,55 @@ schedulerExtraArgs:
   feature-gates: ${feature_gates}
 apiServerExtraArgs:
   feature-gates: ${feature_gates}
+auditPolicy:
+  path: "/etc/kubernetes/audit-policy.yaml"
+  webhookConfigPath: "/etc/kubernetes/audit-webhook.yaml"
+  webhookInitialBackoff: "50s"
+  logDir: "/var/log/audit"
+  logMaxAge: 10
 EOF
 chmod 0600 /etc/kubernetes/kubeadm.conf
 
-kubeadm init --config /etc/kubernetes/kubeadm.conf
+cat <<EOWEBHOOK > /etc/kubernetes/audit-webhook.yaml
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: http://audit.ii.nz:9900
+  name: hit-config
+contexts:
+- context:
+    cluster: hit-config
+    user: ""
+  name: webhook
+current-context: webhook
+users: []
+preferences: {}
+EOWEBHOOK
+chmod 0600 /etc/kubernetes/audit-webhook.yaml
+
+cat <<EOPOLICY > /etc/kubernetes/audit-policy.yaml
+apiVersion: audit.k8s.io/v1beta1
+kind: Policy
+omitStages:
+  - "RequestReceived"
+rules:
+- level: RequestResponse
+  resources:
+  - group: "" # core
+    resources: ["pods", "secrets"]
+  - group: "extensions"
+    resources: ["deployments"]
+EOPOLICY
+chmod 0600 /etc/kubernetes/audit-policy.yaml
+
+echo We need a version of kubeadm that supports audit-webhook configuration
+echo See: https://github.com/kubernetes/kubernetes/pull/62826
+cd /usr/bin
+curl -O https://storage.googleapis.com/artifacts.ii-coop.appspot.com/kubeadm
+chmod +x kubeadm
+
+kubeadm -v 999 init --config /etc/kubernetes/kubeadm.conf
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
