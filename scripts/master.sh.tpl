@@ -14,6 +14,8 @@ authorizationModes:
 - RBAC
 apiServerCertSANs:
 - 127.0.0.1
+featureGates:
+  Auditing: true
 controllerManagerExtraArgs:
   cluster-name: ${instance_prefix}
   allocate-node-cidrs: "true"
@@ -31,7 +33,7 @@ auditPolicy:
   path: "/etc/kubernetes/audit-policy.yaml"
   webhookConfigPath: "/etc/kubernetes/audit-webhook.yaml"
   webhookInitialBackoff: "50s"
-  logDir: "/config"
+  logDir: "/var/log/audit"
   logMaxAge: 10
 EOF
 chmod 0600 /etc/kubernetes/kubeadm.conf
@@ -41,7 +43,7 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: http://audit.ii.nz:9000
+    server: http://audit.ii.nz:9900
   name: hit-config
 contexts:
 - context:
@@ -75,7 +77,7 @@ cd /usr/bin
 curl -O https://storage.googleapis.com/artifacts.ii-coop.appspot.com/kubeadm
 chmod +x kubeadm
 
-kubeadm init --config /etc/kubernetes/kubeadm.conf
+kubeadm -v 999 init --config /etc/kubernetes/kubeadm.conf
 
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
